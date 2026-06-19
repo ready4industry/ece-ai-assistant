@@ -1,0 +1,35 @@
+name: Cron — Cluster Misconceptions
+
+on:
+  schedule:
+    # 16:30 UTC every Saturday (22:00 IST) — matches former vercel.json schedule
+    - cron: '30 16 * * 6'
+  workflow_dispatch:
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Call /api/cron/cluster-misconceptions
+        env:
+          APP_URL:     ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          echo "Triggering cluster-misconceptions at $(date -u)"
+
+          HTTP_CODE=$(curl -s -o /tmp/response.json -w "%{http_code}" \
+            --max-time 300 \
+            -X GET "$APP_URL/api/cron/cluster-misconceptions" \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            -H "Content-Type: application/json")
+
+          echo "HTTP status: $HTTP_CODE"
+          echo "Response body:"
+          cat /tmp/response.json
+
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "Cron job failed — expected 200, got $HTTP_CODE"
+            exit 1
+          fi

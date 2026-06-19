@@ -6,10 +6,11 @@ const redis = new Redis({
   token: process.env.UPSTASH_REDIS_REST_TOKEN!,
 });
 
-// 20 requests per 60 minutes, sliding window, per Firebase UID
+// Per-user sliding window rate limit. Configurable via RATE_LIMIT_PER_HOUR (default 40).
+const rateLimitPerHour = parseInt(process.env.RATE_LIMIT_PER_HOUR ?? '40', 10);
 export const ratelimit = new Ratelimit({
   redis,
-  limiter:   Ratelimit.slidingWindow(20, '60 m'),
+  limiter:   Ratelimit.slidingWindow(rateLimitPerHour, '60 m'),
   analytics: false,
   prefix:    'ece_rl',
 });
