@@ -1,0 +1,45 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-background:              #f8f9fc;
+    --color-surface:                 #ffffff;
+    --color-surface-container:       #f2f4f7;
+    --color-surface-container-low:   #f9fafb;
+    --color-surface-container-high:  #e8eaed;
+    --color-primary:                 #005344;
+    --color-on-primary:              #ffffff;
+    --color-secondary-container:     #41fda8;
+    --color-on-secondary-container:  #003825;
+    --color-tertiary:                #7c5800;
+    --color-outline-variant:         #dde2eb;
+    --color-on-surface:              #181c20;
+    --color-on-surface-variant:      #43474e;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: var(--font-inter, system-ui, sans-serif);
+  }
+
+  code, pre {
+    font-family: var(--font-mono, 'Courier New', monospace);
+  }
+}
+
+@layer components {
+  .prose code {
+    @apply bg-surface-container-high px-1.5 py-0.5 rounded text-sm font-mono;
+  }
+  .prose pre {
+    @apply bg-surface-container-high rounded-lg p-4 overflow-x-auto;
+  }
+  .prose pre code {
+    @apply bg-transparent p-0;
+  }
+}
