@@ -1,5 +1,6 @@
 // /app/api/admin/debug/last-errors/route.ts — Last 50 error log entries
 // Protected by ADMIN_SECRET header
+// CRITICAL_AUTH_FAILURE entries appear at the top of the critical_alerts array.
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
@@ -12,7 +13,7 @@ export async function GET(req: NextRequest) {
 
   const { data: errors, error } = await supabase
     .from('error_log')
-    .select('id, request_id, stage, status, error_msg, context, created_at')
+    .select('id, request_id, stage, provider, error_type, error_msg, payload, created_at')
     .order('created_at', { ascending: false })
     .limit(50);
 
@@ -20,5 +21,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'DB error', detail: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ errors: errors ?? [], total: errors?.length ?? 0 });
+  const all = errors ?? [];
+  const criticalAlerts = all.filter(e => e.error_type === 'CRITICAL_AUTH_FAILURE');
+
+  return NextResponse.json({
+    critical_alerts: criticalAlerts,
+    errors:          all,
+    total:           all.length,
+  });
 }

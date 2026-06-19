@@ -103,6 +103,36 @@ export async function generate(
       lastError = err instanceof Error ? err : new Error(String(err));
       const e = err as { status?: number; statusCode?: number; code?: string; message?: string };
 
+      // ── Auth failure: invalid/revoked API key ─────────────────────────────
+      // 401 means the key itself is broken — every future request to this provider
+      // will also fail until the key is rotated. Treated as critical, not a fallback.
+      const isAuthError =
+        e?.status === 401 ||
+        e?.statusCode === 401 ||
+        e?.status === 403 ||
+        e?.statusCode === 403 ||
+        e?.code === 'invalid_api_key' ||
+        e?.message?.toLowerCase().includes('invalid api key') ||
+        e?.message?.toLowerCase().includes('authentication');
+
+      if (isAuthError) {
+        logger.critical(requestId, 'model_call', provider, lastError, {
+          http_status: e?.status,
+          model:       MODELS[provider],
+          action_required: `Rotate ${provider.toUpperCase()} API key — all requests to this provider will fail until fixed`,
+        });
+        await persistError({
+          request_id: requestId,
+          stage:      'model_call',
+          status:     'critical',
+          provider,
+          model:      MODELS[provider],
+          error_type: 'CRITICAL_AUTH_FAILURE',
+          error_msg:  lastError.message,
+        });
+        throw lastError;
+      }
+
       const isRateLimit =
         e?.status === 429 ||
         e?.statusCode === 429 ||
