@@ -45,10 +45,10 @@ export function SyllabusManager() {
     setSeeding(true);
     setSeedResult(null);
     try {
-      const adminSecret = process.env.NEXT_PUBLIC_ADMIN_SECRET ?? '';
+      const token = await user.getIdToken();
       const res   = await fetch('/api/admin/seed-syllabus', {
         method:  'POST',
-        headers: { 'x-admin-secret': adminSecret },
+        headers: { 'Authorization': `Bearer ${token}` },
       });
       const data  = await res.json();
       setSeedResult(`Seeded ${data.success}/${data.total} topics. Skipped: ${data.skipped}. Failed: ${data.failed}.`);

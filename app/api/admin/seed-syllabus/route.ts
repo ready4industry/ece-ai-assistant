@@ -1,19 +1,29 @@
 // /app/api/admin/seed-syllabus/route.ts — One-time seeder: embeddings for all 62 topics
-// Protected by x-admin-secret header
+// Protected by x-admin-secret header (curl) or faculty Firebase token (dashboard)
 
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI }        from '@google/generative-ai';
 import { supabase }                  from '@/lib/supabase';
 import { SYLLABUS }                  from '@/lib/syllabus-data';
 import { logger }                    from '@/lib/logger';
+import { verifyToken }               from '@/lib/firebase-admin';
 
 export async function POST(req: NextRequest) {
   const requestId = crypto.randomUUID();
 
-  const adminSecret = req.headers.get('x-admin-secret');
-  if (!adminSecret || adminSecret !== process.env.ADMIN_SECRET) {
-    logger.log({ request_id: requestId, stage: 'admin_seed', status: 'warn', details: { reason: 'invalid_secret' } });
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  // Accept either admin secret (curl) or faculty Firebase token (dashboard)
+  const adminSecretHeader = req.headers.get('x-admin-secret');
+  if (adminSecretHeader !== process.env.ADMIN_SECRET) {
+    try {
+      const decoded = await verifyToken(req);
+      const { data: user } = await supabase.from('users').select('role').eq('firebase_uid', decoded.uid).single();
+      if (user?.role !== 'faculty') {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+    } catch {
+      logger.log({ request_id: requestId, stage: 'admin_seed', status: 'warn', details: { reason: 'unauthorized' } });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
   }
 
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
