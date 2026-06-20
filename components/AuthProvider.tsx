@@ -24,6 +24,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
 
       if (firebaseUser) {
+        // Set session cookie so middleware allows access to protected routes.
+        // This is a UX gate only — actual auth verification is done per-route via verifyToken().
+        document.cookie = 'firebase-session=1; path=/; SameSite=Strict';
+
         // Upsert user record on every login
         try {
           const token = await firebaseUser.getIdToken();
@@ -38,6 +42,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (pathname === '/login') {
           router.replace('/assistant');
+        }
+      } else {
+        // Clear session cookie on sign-out so middleware redirects correctly
+        document.cookie = 'firebase-session=; path=/; max-age=0; SameSite=Strict';
+
+        if (pathname !== '/login') {
+          router.replace('/login');
         }
       }
     });
