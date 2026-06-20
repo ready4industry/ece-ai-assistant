@@ -34,14 +34,14 @@ export async function POST(req: NextRequest) {
 
   for (const topic of SYLLABUS) {
     try {
-      // Check if already exists to avoid re-embedding
+      // Check if already exists with a populated embedding — skip only if fully seeded
       const { data: existing } = await supabase
         .from('syllabus_topics')
-        .select('id')
+        .select('id, embedding')
         .eq('topic_slug', topic.topic_slug)
         .single();
 
-      if (existing) {
+      if (existing?.embedding) {
         results.skipped++;
         continue;
       }
@@ -50,20 +50,25 @@ export async function POST(req: NextRequest) {
       const embeddingInput = `${topic.topic}. ${topic.description}. Keywords: ${topic.keywords.join(', ')}.`;
       const { embedding }  = await model.embedContent(embeddingInput);
 
-      const { error } = await supabase.from('syllabus_topics').insert({
-        year:           topic.year,
-        semester:       topic.semester,
-        subject:        topic.subject,
-        subject_label:  topic.subject_label,
-        topic:          topic.topic,
-        topic_slug:     topic.topic_slug,
-        description:    topic.description,
-        prerequisites:  topic.prerequisites,
-        keywords:       topic.keywords,
-        complexity:     topic.complexity,
-        co_po_mapping:  topic.co_po_mapping,
-        embedding:      embedding.values,
-      });
+      // Upsert: insert new row or update embedding on existing row with null embedding
+      const { error } = existing
+        ? await supabase.from('syllabus_topics')
+            .update({ embedding: embedding.values })
+            .eq('id', existing.id)
+        : await supabase.from('syllabus_topics').insert({
+            year:           topic.year,
+            semester:       topic.semester,
+            subject:        topic.subject,
+            subject_label:  topic.subject_label,
+            topic:          topic.topic,
+            topic_slug:     topic.topic_slug,
+            description:    topic.description,
+            prerequisites:  topic.prerequisites,
+            keywords:       topic.keywords,
+            complexity:     topic.complexity,
+            co_po_mapping:  topic.co_po_mapping,
+            embedding:      embedding.values,
+          });
 
       if (error) {
         errors.push(`${topic.topic_slug}: ${error.message}`);
