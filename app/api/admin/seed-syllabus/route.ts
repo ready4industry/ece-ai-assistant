@@ -47,8 +47,11 @@ export async function POST(req: NextRequest) {
       }
 
       // Generate embedding from topic + description + keywords
+      // outputDimensionality: 1536 — gemini-embedding-2 MRL truncation (fits pgvector's 2000-dim index cap)
       const embeddingInput = `${topic.topic}. ${topic.description}. Keywords: ${topic.keywords.join(', ')}.`;
-      const { embedding }  = await model.embedContent(embeddingInput);
+      // outputDimensionality is a valid API param not yet in SDK types (v0.21.0)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { embedding }  = await model.embedContent({ content: { parts: [{ text: embeddingInput }], role: 'user' }, outputDimensionality: 1536 } as any);
 
       // Upsert: insert new row or update embedding on existing row with null embedding
       const { error } = existing

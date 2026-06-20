@@ -40,7 +40,9 @@ export async function GET(req: NextRequest) {
 
   for (const row of misconceptions) {
     try {
-      const { embedding } = await model.embedContent(row.misconception);
+      // outputDimensionality is a valid API param not yet in SDK types (v0.21.0)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { embedding } = await model.embedContent({ content: { parts: [{ text: row.misconception }], role: 'user' }, outputDimensionality: 1536 } as any);
       const embVec        = embedding.values;
 
       // Update the misconception_log row with its embedding
