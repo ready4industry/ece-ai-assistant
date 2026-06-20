@@ -11,14 +11,12 @@ export async function PUT(req: NextRequest) {
   let userId: string;
   let email:  string | undefined;
   let name:   string | undefined;
-  let photo:  string | undefined;
 
   try {
     const decoded = await verifyToken(req);
     userId = decoded.uid;
-    email  = decoded.email ?? undefined;
-    name   = decoded.name  ?? undefined;
-    photo  = decoded.picture ?? undefined;
+    email  = decoded.email   ?? undefined;
+    name   = decoded.name    ?? undefined;
   } catch (err) {
     logger.failure(requestId, 'auth', err, {});
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -43,9 +41,8 @@ export async function PUT(req: NextRequest) {
     .upsert(
       {
         firebase_uid:  userId,
-        email:         email ?? null,
-        display_name:  name  ?? null,
-        photo_url:     photo ?? null,
+        email:         email        ?? '',
+        display_name:  name         ?? '',
         role,
         year_of_study: year,
       },
