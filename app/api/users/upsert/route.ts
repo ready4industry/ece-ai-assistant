@@ -22,7 +22,7 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  let body: { year_of_study?: number; role?: string } = {};
+  let body: { year_of_study?: number } = {};
   try {
     body = await req.json();
   } catch {
@@ -33,8 +33,10 @@ export async function PUT(req: NextRequest) {
     ? body.year_of_study
     : 1;
 
-  // Only allow 'student' or 'faculty' as roles, default student
-  const role = body.role === 'faculty' ? 'faculty' : 'student';
+  // Role is derived server-side from email only. Never trust a client-sent role —
+  // that would let any account grant itself faculty access by editing the request.
+  const FACULTY_EMAILS = ['keshav.karn@gmail.com'];
+  const role = email && FACULTY_EMAILS.includes(email) ? 'faculty' : 'student';
 
   const { data, error } = await supabase
     .from('users')
