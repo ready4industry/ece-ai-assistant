@@ -28,17 +28,21 @@ export async function checkSambaNovaBudget(): Promise<boolean> {
 const TODAY = () => new Date().toISOString().slice(0, 10);
 
 const PROVIDER_LIMITS: Record<string, { daily_req?: number; daily_tokens?: number }> = {
-  groq_70b:      { daily_req: 1000 },
-  groq_8b:       { daily_req: 14400 },
-  groq_qwen:     { daily_req: 1000 },
-  groq_27b:      { daily_req: 1000 },
-  groq_120b:     { daily_req: 1000 },
-  cerebras:      { daily_tokens: 1_000_000 },
-  cerebras_b:    { daily_tokens: 1_000_000 },
-  sambanova_all: { daily_req: 20 },
-  gemini_p:      { daily_req: 250 },
-  gemini_f:      { daily_req: 250 },
-  gemini_lite:   { daily_req: 1000 },
+  groq_70b:        { daily_req: 1000 },
+  groq_8b:         { daily_req: 14400 },
+  groq_qwen:       { daily_req: 1000 },
+  groq_27b:        { daily_req: 1000 },
+  groq_120b:       { daily_req: 1000 },
+  cerebras:        { daily_tokens: 1_000_000 },
+  cerebras_b:      { daily_tokens: 1_000_000 },
+  sambanova_all:   { daily_req: 20 },
+  gemini_f:        { daily_req: 250 },
+  gemini_p:        { daily_req: 250 },
+  gemini_fl:       { daily_req: 1000 },
+  gemini_lite:     { daily_req: 1000 },
+  gemini_preview:  { daily_req: 250 },
+  gemini_latest:   { daily_req: 1000 },
+  gemini_litelast: { daily_req: 1000 },
 };
 
 export async function checkProviderBudget(provider: string): Promise<boolean> {

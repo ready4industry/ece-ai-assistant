@@ -260,9 +260,16 @@ export async function buildPromptPacket(
     return buildFullPacket({
       rawQuery, year, subject, intent, cognitiveOp,
       topicMatch, session, complexity, knowledgeCtx,
-      releaseLevel:    release.level,
-      releaseInstruction: release.instruction,
-      engagementScore: newScore,
+      releaseLevel:        release.level,
+      releaseInstruction:  release.instruction,
+      engagementScore:     newScore,
+      probeAnswer:         probeAnswer ?? null,
+      probeAnswerQuality:  (
+        probeClass.state === 'correct'  ? 'correct'  :
+        probeClass.state === 'partial'  ? 'partial'  :
+        probeClass.state === 'surface_answer' ? 'surface' :
+        'none'
+      ),
     });
   }
 
@@ -315,6 +322,8 @@ function buildFullPacket(args: {
   releaseLevel?:       0|1|2|3|4;
   releaseInstruction?: string;
   engagementScore?:    number;
+  probeAnswer?:        string | null;
+  probeAnswerQuality?: 'none' | 'surface' | 'partial' | 'correct';
 }): PromptPacket {
   const rl = (args.releaseLevel ?? args.session.release_level) as 0|1|2|3|4;
   return {
@@ -337,10 +346,10 @@ function buildFullPacket(args: {
     correct_concepts:     [],
     misconceptions:       [],
     prior_attempt:        null,
-    probe_answer:         null,
-    probe_answer_quality: 'none',
+    probe_answer:         args.probeAnswer ?? null,
+    probe_answer_quality: args.probeAnswerQuality ?? 'none',
     recommended_model:    'groq_70b',
-    fallback_models:      ['cerebras', 'gemini_p'],
+    fallback_models:      ['cerebras', 'gemini_f', 'gemini_p'],
     max_tokens:           2000,
     raw_query:            args.rawQuery,
     session_history:      args.knowledgeCtx,
@@ -376,7 +385,7 @@ function buildMinimalPacket(
     probe_answer:         null,
     probe_answer_quality: 'none',
     recommended_model:    'groq_8b',
-    fallback_models:      ['cerebras', 'gemini_lite'],
+    fallback_models:      ['cerebras', 'gemini_lite', 'gemini_litelast'],
     max_tokens:           500,
     raw_query:            rawQuery,
     session_history:      '',
