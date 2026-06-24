@@ -9,19 +9,23 @@ export type YearOfStudy    = 1 | 2 | 3 | 4;
 
 // 13 provider keys — Live Model Verification §10 Step 2
 export type AIProvider =
-  | 'groq_70b'    // llama-3.3-70b-versatile
-  | 'groq_8b'     // llama-3.1-8b-instant
-  | 'groq_qwen'   // qwen/qwen3-32b
-  | 'groq_27b'    // qwen/qwen3.6-27b
-  | 'groq_120b'   // openai/gpt-oss-120b
-  | 'cerebras'    // gpt-oss-120b
-  | 'cerebras_b'  // zai-glm-4.7
-  | 'sn_verilog'  // gpt-oss-120b on SambaNova
-  | 'sn_research' // DeepSeek-V3.1
-  | 'sn_reserve'  // Meta-Llama-3.3-70B-Instruct (3K out — last resort)
-  | 'gemini_p'    // gemini-3.5-flash
-  | 'gemini_f'    // gemini-2.5-flash
-  | 'gemini_lite'; // gemini-3.1-flash-lite
+  | 'groq_70b'         // llama-3.3-70b-versatile
+  | 'groq_8b'          // llama-3.1-8b-instant
+  | 'groq_qwen'        // qwen/qwen3-32b
+  | 'groq_27b'         // qwen/qwen3.6-27b
+  | 'groq_120b'        // openai/gpt-oss-120b
+  | 'cerebras'         // gpt-oss-120b
+  | 'cerebras_b'       // zai-glm-4.7
+  | 'sn_verilog'       // gpt-oss-120b on SambaNova
+  | 'sn_research'      // DeepSeek-V3.1
+  | 'sn_reserve'       // Meta-Llama-3.3-70B-Instruct (3K out — last resort)
+  | 'gemini_f'         // gemini-2.5-flash (primary — strongest)
+  | 'gemini_p'         // gemini-3.5-flash (second tier)
+  | 'gemini_fl'        // gemini-2.5-flash-lite (fast mid-tier)
+  | 'gemini_lite'      // gemini-3.1-flash-lite (cheapest/fastest)
+  | 'gemini_preview'   // gemini-3-flash-preview (reserve/experimental)
+  | 'gemini_latest'    // gemini-flash-latest (auto-updates, overflow)
+  | 'gemini_litelast'; // gemini-flash-lite-latest (auto-updates, cron/background)
 
 export type IntentType =
   | 'definition' | 'code_request' | 'error_analysis' | 'concept_explanation'

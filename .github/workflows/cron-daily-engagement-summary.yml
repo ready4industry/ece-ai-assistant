@@ -1,0 +1,35 @@
+name: Cron — Daily Engagement Summary
+
+on:
+  schedule:
+    # 18:00 UTC daily (23:30 IST) — matches former vercel.json schedule
+    - cron: '0 18 * * *'
+  workflow_dispatch:
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Call /api/cron/daily-engagement-summary
+        env:
+          APP_URL:     ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          echo "Triggering daily-engagement-summary at $(date -u)"
+
+          HTTP_CODE=$(curl -s -o /tmp/response.json -w "%{http_code}" \
+            --max-time 300 \
+            -X GET "$APP_URL/api/cron/daily-engagement-summary" \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            -H "Content-Type: application/json")
+
+          echo "HTTP status: $HTTP_CODE"
+          echo "Response body:"
+          cat /tmp/response.json
+
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "Cron job failed — expected 200, got $HTTP_CODE"
+            exit 1
+          fi
