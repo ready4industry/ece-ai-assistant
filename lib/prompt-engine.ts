@@ -59,6 +59,7 @@ function validateSignal(raw: string): SignalResult {
 // ── L2: Intent Classifier ────────────────────────────────────────────────────
 const INTENT_PATTERNS: Array<[IntentType, RegExp]> = [
   ['code_request',    /\b(write|generate|create|give me|show me code|implement|make me)\b/i],
+  ['research_help',   /\b(paper|research|literature|reference|cite|journal|ieee|survey|advances|recent advances|state of the art|trends in|developments in|review of|overview of|applications of|emerging)\b/i],
   ['error_analysis',  /\b(error|undefined|null|failed|not working|bug|crash|exception|warning|segfault)\b/i],
   ['verilog_review',  /\b(verilog|vhdl|fpga|rtl|synthesis|always block|module|wire|reg|synthesize)\b/i],
   ['definition',      /\b(what is|what are|define|explain|meaning of|what does|what do you mean)\b/i],
@@ -66,7 +67,6 @@ const INTENT_PATTERNS: Array<[IntentType, RegExp]> = [
   ['design_request',  /\b(design|architect|plan|create a system|how would you)\b/i],
   ['image_analysis',  /\b(circuit|waveform|diagram|schematic|uploaded|this image|image)\b/i],
   ['project_help',    /\b(project|final year|semester project|dissertation|capstone)\b/i],
-  ['research_help',   /\b(paper|research|literature|reference|cite|journal|ieee|survey)\b/i],
 ];
 
 interface ClassifyResult {
@@ -266,10 +266,20 @@ export async function buildPromptPacket(
     });
   }
 
-  // Socratic probe decision
+  // Skip probe for task-execution intents — student is asking for
+  // something to be done (code, debug, image analysis), not explaining
+  // a concept. Probing these feels like obstruction, not teaching.
+  // 'research_help' is also excluded — a specific research query should
+  // get a direct answer; vague queries fall through to 'definition' and
+  // are correctly probed by the existing logic.
+  const NO_PROBE_INTENTS: IntentType[] = [
+    'code_request', 'error_analysis', 'image_analysis',
+    'debugging', 'research_help',
+  ];
   const shouldProbe = (
     session.probe_count < 3 &&
     !['acknowledgement', 'follow_up', 'noise'].includes(intent) &&
+    !NO_PROBE_INTENTS.includes(intent) &&
     complexity >= 3
   );
 

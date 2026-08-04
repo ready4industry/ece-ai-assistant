@@ -28,12 +28,25 @@ export default function AssistantPage() {
   const [controller, setController] = useState('arduino');
   const [mode,       setMode]       = useState<'code'|'error'|'concept'|'verilog'|'project'|'research'>('concept');
   const [query,      setQuery]      = useState('');
-  const [messages,   setMessages]   = useState<Message[]>([]);
+  const [allMessages, setAllMessages] = useState<Record<string, Message[]>>({});
+  const [allProbeIds, setAllProbeIds] = useState<Record<string, string | null>>({});
   const [loading,    setLoading]    = useState(false);
   const [sessionId]  = useState(() => `${Date.now()}-${Math.random().toString(36).slice(2)}`);
-  const [pendingProbeId, setPendingProbeId] = useState<string | null>(null);
 
-  const appendMessage = (msg: Message) => setMessages(prev => [...prev, msg]);
+  // Tab key: "code:arduino", "code:esp32" etc. for code mode,
+  // plain mode string for all other modes.
+  // This gives each controller its own independent history within code mode.
+  const tabKey = mode === 'code' ? `code:${controller}` : mode;
+
+  // Derived state for current tab
+  const messages       = allMessages[tabKey] ?? [];
+  const pendingProbeId = allProbeIds[tabKey] ?? null;
+
+  const appendMessage = (msg: Message) =>
+    setAllMessages(prev => ({ ...prev, [tabKey]: [...(prev[tabKey] ?? []), msg] }));
+
+  const setPendingProbeId = (id: string | null) =>
+    setAllProbeIds(prev => ({ ...prev, [tabKey]: id }));
 
   const sendQuery = useCallback(async (queryText: string, probeAnswer?: string) => {
     if (!user || loading || !queryText.trim()) return;

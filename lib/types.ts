@@ -26,7 +26,8 @@ export type AIProvider =
 export type IntentType =
   | 'definition' | 'code_request' | 'error_analysis' | 'concept_explanation'
   | 'verilog_review' | 'derivation' | 'design_request' | 'image_analysis'
-  | 'project_help' | 'research_help' | 'follow_up' | 'acknowledgement' | 'noise';
+  | 'project_help' | 'research_help' | 'follow_up' | 'acknowledgement'
+  | 'noise' | 'debugging';
 
 export type CognitiveOp =
   | 'recall' | 'classification' | 'application' | 'analysis' | 'synthesis' | 'evaluation';
