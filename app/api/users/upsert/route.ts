@@ -41,7 +41,16 @@ export async function PUT(req: NextRequest) {
       ? body.year_of_study
       : 1;
 
-  const role = body.role === 'faculty' ? 'faculty' : 'student';
+  // Check if user already exists so we don't overwrite their role on re-login
+  const { data: existing } = await supabase
+    .from('users')
+    .select('id, role, year_of_study')
+    .eq('firebase_uid', userId)
+    .single();
+
+  const role = existing
+    ? existing.role                                    // preserve existing role
+    : body.role === 'faculty' ? 'faculty' : 'student'; // default new users to student
 
   const { data, error } = await supabase
     .from('users')
@@ -51,7 +60,8 @@ export async function PUT(req: NextRequest) {
         email: email ?? null,
         display_name: name ?? null,
         role,
-        year_of_study: year,
+        year_of_study: existing ? existing.year_of_study : year,
+        last_seen_at: new Date().toISOString(),
       },
       {
         onConflict: 'firebase_uid',
