@@ -30,6 +30,7 @@ export async function generateProbe(
   userId:       string,
   requestId:    string,
   imageContext?: boolean,
+  dbUserId?:    string | null,
 ): Promise<{ probeText: string; templateUsed: string | null; probeId: string }> {
   let probeText:    string;
   let templateUsed: string | null = null;
@@ -56,7 +57,15 @@ Return only the probe question, no preamble.`;
       max_tokens:  100,
       temperature: 0.3,
     });
-    probeText = res.choices[0]?.message?.content?.trim() ?? '';
+    const raw = res.choices[0]?.message?.content ?? '';
+    // Qwen3 models emit <think>...</think> chain-of-thought before the answer.
+    // Two-pass strip:
+    // Pass 1 — remove properly closed <think>...</think> blocks.
+    // Pass 2 — remove any remaining unclosed <think> block that runs to end of string.
+    probeText = raw
+      .replace(/<think>[\s\S]*?<\/think>/g, '')
+      .replace(/<think>[\s\S]*/g, '')
+      .trim();
 
     if (!probeText) throw new Error('Empty response from probe generator');
     logger.success(requestId, 'probe_generation', { method: 'groq_qwen27b', topic });
@@ -72,7 +81,7 @@ Return only the probe question, no preamble.`;
     .from('probes')
     .insert({
       session_id:     sessionId,
-      user_id:        userId || null,
+      user_id:        dbUserId || null,
       topic_slug:     topicSlug,
       template_used:  templateUsed,
       generated_text: probeText,
@@ -82,11 +91,19 @@ Return only the probe question, no preamble.`;
     .single();
 
   if (probeErr || !probeRow) {
-    logger.failure(requestId, 'db_write', probeErr ?? new Error('null probeRow'), {
+    // Log the actual Supabase error message, not the raw object
+    const errMsg = probeErr
+      ? (typeof probeErr === 'object' && 'message' in probeErr
+          ? (probeErr as { message: string }).message
+          : JSON.stringify(probeErr))
+      : 'null probeRow';
+    logger.failure(requestId, 'db_write', new Error(errMsg), {
       table: 'probes', payload: { session_id: sessionId, topic_slug: topicSlug },
     });
-    // Still return the probe text even if DB write fails
-    return { probeText, templateUsed, probeId: '' };
+    // Return a generated UUID so session.pending_probe_id is non-null.
+    // Without this, the probe answer classify path never fires and the
+    // engine issues another probe on every reply — infinite loop.
+    return { probeText, templateUsed, probeId: crypto.randomUUID() };
   }
 
   return { probeText, templateUsed, probeId: probeRow.id };
@@ -123,9 +140,14 @@ export async function classifyProbeResponse(
   });
 
   // Explicit confusion
-  const confusionMarkers = ['idk', "i don't know", 'i dont know', 'no idea', 'not sure',
-    'i have no idea', "i don't understand", 'i dont understand', 'confused', 'no clue'];
-  if (words.length <= 4 && confusionMarkers.some(m => answer.includes(m))) {
+  const confusionMarkers = [
+    'idk', "i don't know", 'i dont know', 'no idea', 'not sure',
+    'i have no idea', "i don't understand", 'i dont understand', 'confused', 'no clue',
+    "i'm not sure", 'im not sure', 'not really sure', 'have no idea', 'no clue at all',
+    "i don't know what", 'i dont know what', "i'm confused", 'im confused',
+    'completely lost', 'have no clue', 'not sure what', "don't know how", 'dont know how',
+  ];
+  if (words.length <= 10 && confusionMarkers.some(m => answer.includes(m))) {
     await writeProbeResponse(probeId, studentAnswer, 'honest_confusion', 0, 0, requestId);
     return { state: 'honest_confusion', relevanceScore: 0, overlapRatio: 0, wordCount: words.length, entropy };
   }
@@ -165,13 +187,19 @@ export async function classifyProbeResponse(
   const topicKeywords   = new Set<string>((topicData?.keywords ?? []).map((k: string) => k.toLowerCase()));
   const relevanceScore  = answerTokens.filter(t => topicKeywords.has(t)).length;
 
+  // Hedging language signals the student is attempting but uncertain — treat as partial
+  const hedgingMarkers = ["i think", "i believe", "maybe", "perhaps", "i guess",
+    "probably", "i'm not sure but", 'im not sure but', 'could be', 'might be',
+    'i think it', "i'm guessing", 'im guessing'];
+  const hasHedging = hedgingMarkers.some(m => answer.includes(m));
+
   let state: EngagementState;
-  if (relevanceScore === 0 && words.length > 3) {
+  if (relevanceScore > 0 || hasHedging) {
+    state = words.length >= 5 ? 'partial' : 'surface_answer';
+  } else if (relevanceScore === 0 && words.length > 3) {
     state = 'irrelevant_genuine';
     // Groq 8b generates one-sentence acknowledge+redirect for irrelevant_genuine
     await handleIrrelevantGenuine(studentAnswer, topic, requestId);
-  } else if (relevanceScore > 0 && words.length >= 5) {
-    state = 'partial';
   } else {
     state = words.length < 4 ? 'surface_answer' : 'partial';
   }

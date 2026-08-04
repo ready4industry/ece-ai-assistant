@@ -1,19 +1,29 @@
 // /app/api/admin/seed-syllabus/route.ts — One-time seeder: embeddings for all 62 topics
-// Protected by x-admin-secret header
+// Protected by x-admin-secret header (curl) or faculty Firebase token (dashboard)
 
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI }        from '@google/generative-ai';
 import { supabase }                  from '@/lib/supabase';
 import { SYLLABUS }                  from '@/lib/syllabus-data';
 import { logger }                    from '@/lib/logger';
+import { verifyToken }               from '@/lib/firebase-admin';
 
 export async function POST(req: NextRequest) {
   const requestId = crypto.randomUUID();
 
-  const adminSecret = req.headers.get('x-admin-secret');
-  if (!adminSecret || adminSecret !== process.env.ADMIN_SECRET) {
-    logger.log({ request_id: requestId, stage: 'admin_seed', status: 'warn', details: { reason: 'invalid_secret' } });
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  // Accept either admin secret (curl) or faculty Firebase token (dashboard)
+  const adminSecretHeader = req.headers.get('x-admin-secret');
+  if (adminSecretHeader !== process.env.ADMIN_SECRET) {
+    try {
+      const decoded = await verifyToken(req);
+      const { data: user } = await supabase.from('users').select('role').eq('firebase_uid', decoded.uid).single();
+      if (user?.role !== 'faculty') {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+    } catch {
+      logger.log({ request_id: requestId, stage: 'admin_seed', status: 'warn', details: { reason: 'unauthorized' } });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
   }
 
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
@@ -24,36 +34,44 @@ export async function POST(req: NextRequest) {
 
   for (const topic of SYLLABUS) {
     try {
-      // Check if already exists to avoid re-embedding
+      // Check if already exists with a populated embedding — skip only if fully seeded
       const { data: existing } = await supabase
         .from('syllabus_topics')
-        .select('id')
+        .select('id, embedding')
         .eq('topic_slug', topic.topic_slug)
         .single();
 
-      if (existing) {
+      if (existing?.embedding) {
         results.skipped++;
         continue;
       }
 
       // Generate embedding from topic + description + keywords
+      // outputDimensionality: 1536 — gemini-embedding-2 MRL truncation (fits pgvector's 2000-dim index cap)
       const embeddingInput = `${topic.topic}. ${topic.description}. Keywords: ${topic.keywords.join(', ')}.`;
-      const { embedding }  = await model.embedContent(embeddingInput);
+      // outputDimensionality is a valid API param not yet in SDK types (v0.21.0)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { embedding }  = await model.embedContent({ content: { parts: [{ text: embeddingInput }], role: 'user' }, outputDimensionality: 1536 } as any);
 
-      const { error } = await supabase.from('syllabus_topics').insert({
-        year:           topic.year,
-        semester:       topic.semester,
-        subject:        topic.subject,
-        subject_label:  topic.subject_label,
-        topic:          topic.topic,
-        topic_slug:     topic.topic_slug,
-        description:    topic.description,
-        prerequisites:  topic.prerequisites,
-        keywords:       topic.keywords,
-        complexity:     topic.complexity,
-        co_po_mapping:  topic.co_po_mapping,
-        embedding:      embedding.values,
-      });
+      // Upsert: insert new row or update embedding on existing row with null embedding
+      const { error } = existing
+        ? await supabase.from('syllabus_topics')
+            .update({ embedding: embedding.values })
+            .eq('id', existing.id)
+        : await supabase.from('syllabus_topics').insert({
+            year:           topic.year,
+            semester:       topic.semester,
+            subject:        topic.subject,
+            subject_label:  topic.subject_label,
+            topic:          topic.topic,
+            topic_slug:     topic.topic_slug,
+            description:    topic.description,
+            prerequisites:  topic.prerequisites,
+            keywords:       topic.keywords,
+            complexity:     topic.complexity,
+            co_po_mapping:  topic.co_po_mapping,
+            embedding:      embedding.values,
+          });
 
       if (error) {
         errors.push(`${topic.topic_slug}: ${error.message}`);

@@ -50,12 +50,15 @@ CREATE TABLE misconception_log (
   cluster_id      UUID,
   verified        BOOLEAN DEFAULT false,
   constitutional_critique TEXT,
+  embedding       vector(1536),
   created_at      TIMESTAMPTZ DEFAULT now()
 );
-CREATE INDEX idx_misconception_user    ON misconception_log(user_id);
-CREATE INDEX idx_misconception_topic   ON misconception_log(topic_slug);
-CREATE INDEX idx_misconception_cluster ON misconception_log(cluster_id);
-CREATE INDEX idx_misconception_verified ON misconception_log(verified);
+CREATE INDEX idx_misconception_user      ON misconception_log(user_id);
+CREATE INDEX idx_misconception_topic     ON misconception_log(topic_slug);
+CREATE INDEX idx_misconception_cluster   ON misconception_log(cluster_id);
+CREATE INDEX idx_misconception_verified  ON misconception_log(verified);
+CREATE INDEX idx_misconception_embedding ON misconception_log
+  USING ivfflat (embedding vector_cosine_ops) WITH (lists = 50);
 
 -- ═══════════════════════════════════════════════
 -- MISCONCEPTION CLUSTERS (B7 — semantic clustering)
@@ -63,17 +66,17 @@ CREATE INDEX idx_misconception_verified ON misconception_log(verified);
 CREATE TABLE misconception_clusters (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   canonical_label TEXT NOT NULL,
-  embedding       vector(768),
+  embedding       vector(1536),
   topic_slug      TEXT,
   sample_count    INTEGER DEFAULT 1,
   created_at      TIMESTAMPTZ DEFAULT now()
 );
 CREATE INDEX idx_misconception_clusters_embedding ON misconception_clusters
-  USING ivfflat (embedding vector_cosine_ops) WITH (lists = 50);
+  USING hnsw (embedding vector_cosine_ops);
 
 -- Match misconception to cluster function
 CREATE OR REPLACE FUNCTION match_misconception_cluster(
-  query_embedding vector(768),
+  query_embedding vector(1536),
   match_threshold FLOAT DEFAULT 0.82,
   match_count     INT   DEFAULT 1
 ) RETURNS TABLE (id UUID, canonical_label TEXT, similarity FLOAT)

@@ -68,7 +68,7 @@ export default function AssistantPage() {
       if (data.type === 'probe') {
         setPendingProbeId(data.probe_id ?? null);
         appendMessage({
-          role: 'assistant', text: '', isProbe: true,
+          role: 'assistant', text: data.probe ?? '', isProbe: true,
           queryId: data.query_id, probeId: data.probe_id,
         });
       } else {
@@ -141,7 +141,7 @@ export default function AssistantPage() {
                       provider={msg.provider}
                       releaseLevel={msg.releaseLevel}
                       topic={msg.topic}
-                      probeText={msg.isProbe ? (messages.find(m => m.role === 'assistant' && m.isProbe)?.text ?? null) : null}
+                      probeText={msg.isProbe ? (msg.text || null) : null}
                       onProbeAnswer={msg.isProbe ? handleProbeAnswer : undefined}
                     />
                   </div>

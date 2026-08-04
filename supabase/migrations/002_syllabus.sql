@@ -24,7 +24,7 @@ CREATE TABLE syllabus_topics (
   keywords        TEXT[],
   complexity      SMALLINT CHECK (complexity BETWEEN 1 AND 10),
   co_po_mapping   TEXT[],
-  embedding       vector(768),
+  embedding       vector(1536),
   created_at      TIMESTAMPTZ DEFAULT now()
 );
 
@@ -32,13 +32,13 @@ CREATE INDEX idx_syllabus_year      ON syllabus_topics(year);
 CREATE INDEX idx_syllabus_subject   ON syllabus_topics(subject);
 CREATE INDEX idx_syllabus_slug      ON syllabus_topics(topic_slug);
 CREATE INDEX idx_syllabus_embedding ON syllabus_topics
-  USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
+  USING hnsw (embedding vector_cosine_ops);
 
 -- ═══════════════════════════════════════════════
 -- SIMILARITY SEARCH FUNCTION
 -- ═══════════════════════════════════════════════
 CREATE OR REPLACE FUNCTION match_topic(
-  query_embedding vector(768),
+  query_embedding vector(1536),
   match_year      SMALLINT,
   match_threshold FLOAT DEFAULT 0.7,
   match_count     INT   DEFAULT 3

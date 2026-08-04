@@ -4,7 +4,7 @@
 // Wide string so new route stages don't require enum updates
 export type LogStage = string;
 
-export type LogStatus = 'success' | 'failure' | 'fallback' | 'skip' | 'warn';
+export type LogStatus = 'success' | 'failure' | 'fallback' | 'skip' | 'warn' | 'critical';
 
 export interface LogEntry {
   request_id: string;
@@ -28,7 +28,10 @@ class Logger {
 
   log(entry: Omit<LogEntry, 'timestamp'>): void {
     const full: LogEntry = { ...entry, timestamp: new Date().toISOString() };
-    if (entry.status === 'failure') {
+    if (entry.status === 'critical') {
+      // Writes to stderr with a distinctive prefix so Vercel log drain / grep alerts fire
+      console.error('[ECE-CRITICAL]', this.formatEntry(full));
+    } else if (entry.status === 'failure') {
       console.error('[ECE]', this.formatEntry(full));
     } else if (entry.status === 'warn' || entry.status === 'fallback') {
       console.warn('[ECE]', this.formatEntry(full));
@@ -55,6 +58,25 @@ class Logger {
       stage,
       status: 'failure',
       error_type: err.name,
+      error_msg:  err.message,
+      details,
+    });
+  }
+
+  critical(
+    request_id: string,
+    stage: LogStage,
+    provider: string,
+    error: Error | unknown,
+    details?: Record<string, unknown>
+  ): void {
+    const err = error instanceof Error ? error : new Error(String(error));
+    this.log({
+      request_id,
+      stage,
+      status: 'critical',
+      provider,
+      error_type: 'CRITICAL_AUTH_FAILURE',
       error_msg:  err.message,
       details,
     });

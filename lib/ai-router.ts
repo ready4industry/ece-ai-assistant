@@ -12,34 +12,55 @@ import { checkProviderBudget, trackProviderTokens } from './ratelimit';
 
 // ── Verified model strings (Live Model Verification §6) ────────────────────
 export const MODELS: Record<AIProvider, string> = {
-  groq_70b:    'llama-3.3-70b-versatile',
-  groq_8b:     'llama-3.1-8b-instant',
-  groq_qwen:   'qwen/qwen3-32b',
-  groq_27b:    'qwen/qwen3.6-27b',
-  groq_120b:   'openai/gpt-oss-120b',
-  cerebras:    'gpt-oss-120b',
-  cerebras_b:  'zai-glm-4.7',
-  sn_verilog:  'gpt-oss-120b',
-  sn_research: 'DeepSeek-V3.1',
-  sn_reserve:  'Meta-Llama-3.3-70B-Instruct',
-  gemini_p:    'gemini-3.5-flash',
-  gemini_f:    'gemini-2.5-flash',
-  gemini_lite: 'gemini-3.1-flash-lite',
+  groq_70b:        'llama-3.3-70b-versatile',
+  groq_8b:         'llama-3.1-8b-instant',
+  groq_qwen:       'qwen/qwen3-32b',
+  groq_27b:        'qwen/qwen3.6-27b',
+  groq_120b:       'openai/gpt-oss-120b',
+  cerebras:        'gpt-oss-120b',
+  cerebras_b:      'zai-glm-4.7',
+  sn_verilog:      'gpt-oss-120b',
+  sn_research:     'DeepSeek-V3.1',
+  sn_reserve:      'Meta-Llama-3.3-70B-Instruct',
+  gemini_f:        'gemini-2.5-flash',
+  gemini_p:        'gemini-3.5-flash',
+  gemini_fl:       'gemini-2.5-flash-lite',
+  gemini_lite:     'gemini-3.1-flash-lite',
+  gemini_preview:  'gemini-3-flash-preview',
+  gemini_latest:   'gemini-flash-latest',
+  gemini_litelast: 'gemini-flash-lite-latest',
 } as const;
 
 // ── Routes (Live Model Verification §7) ────────────────────────────────────
 // scan mode is NOT here — handled in /api/scan/route.ts
 export const ROUTES: Record<QueryMode, AIProvider[]> = {
-  code:     ['groq_70b',    'cerebras',    'gemini_lite'],
-  error:    ['groq_70b',    'groq_qwen',   'cerebras',    'gemini_lite'],
-  concept:  ['groq_8b',     'cerebras',    'gemini_lite'],
-  verilog:  ['sn_verilog',  'groq_70b',    'gemini_p'],
-  project:  ['sn_research', 'groq_120b',   'gemini_p'],
-  research: ['sn_research', 'gemini_p',    'groq_120b'],
+  // Groq primary → Cerebras overflow → Gemini lite cascade
+  code:     ['groq_70b',   'cerebras',      'gemini_lite',  'gemini_litelast'],
+  error:    ['groq_70b',   'groq_qwen',     'cerebras',     'gemini_lite', 'gemini_litelast'],
+  // Y1-2 concept: fast 8b → Cerebras → Gemini lite cascade
+  concept:  ['groq_8b',    'cerebras',      'gemini_lite',  'gemini_litelast'],
+  // Verilog Y1-2: Gemini first (preserve SambaNova budget) → SambaNova fallback
+  verilog:  ['gemini_f',   'gemini_p',      'sn_verilog',   'groq_70b'],
+  // Project: SambaNova deep reasoning → Groq → Gemini deep cascade
+  project:  ['sn_research','groq_120b',     'gemini_f',     'gemini_p'],
+  // Research Y1-2: Gemini first → SambaNova fallback → Groq last
+  research: ['gemini_f',   'gemini_latest', 'sn_research',  'groq_120b'],
 };
 
-// Year 3-4 concept override (Live Model Verification §7 note)
-const CONCEPT_Y34_PROVIDERS: AIProvider[] = ['groq_70b', 'cerebras', 'gemini_p'];
+// Y3-4 concept: needs stronger model than groq_8b
+const CONCEPT_Y34_PROVIDERS: AIProvider[] = ['groq_70b', 'cerebras', 'gemini_p', 'gemini_latest'];
+
+// Y3-4 verilog: SambaNova directly — complex RTL, don't use Gemini first
+const VERILOG_Y34_PROVIDERS: AIProvider[] = ['sn_verilog', 'gemini_f', 'gemini_p', 'groq_70b'];
+
+// Y3-4 research: SambaNova directly — deep reasoning required
+const RESEARCH_Y34_PROVIDERS: AIProvider[] = ['sn_research', 'gemini_f', 'gemini_latest', 'groq_120b'];
+
+// Remedial/prerequisite drop — needs simple clear explanation, not powerful model
+export const REMEDIAL_PROVIDERS: AIProvider[] = ['gemini_fl', 'gemini_litelast', 'groq_8b'];
+
+// Background cron jobs — latency irrelevant, cost and token efficiency matter
+export const CRON_PROVIDERS: AIProvider[] = ['gemini_litelast', 'gemini_fl', 'gemini_lite'];
 
 // ── Main export ─────────────────────────────────────────────────────────────
 export async function generate(
@@ -55,6 +76,10 @@ export async function generate(
     providers = overrideProviders;
   } else if (mode === 'concept' && yearOfStudy && yearOfStudy >= 3) {
     providers = CONCEPT_Y34_PROVIDERS;
+  } else if (mode === 'verilog' && yearOfStudy && yearOfStudy >= 3) {
+    providers = VERILOG_Y34_PROVIDERS;
+  } else if (mode === 'research' && yearOfStudy && yearOfStudy >= 3) {
+    providers = RESEARCH_Y34_PROVIDERS;
   } else {
     providers = ROUTES[mode];
   }
@@ -102,6 +127,36 @@ export async function generate(
     } catch (err: unknown) {
       lastError = err instanceof Error ? err : new Error(String(err));
       const e = err as { status?: number; statusCode?: number; code?: string; message?: string };
+
+      // ── Auth failure: invalid/revoked API key ─────────────────────────────
+      // 401 means the key itself is broken — every future request to this provider
+      // will also fail until the key is rotated. Treated as critical, not a fallback.
+      const isAuthError =
+        e?.status === 401 ||
+        e?.statusCode === 401 ||
+        e?.status === 403 ||
+        e?.statusCode === 403 ||
+        e?.code === 'invalid_api_key' ||
+        e?.message?.toLowerCase().includes('invalid api key') ||
+        e?.message?.toLowerCase().includes('authentication');
+
+      if (isAuthError) {
+        logger.critical(requestId, 'model_call', provider, lastError, {
+          http_status: e?.status,
+          model:       MODELS[provider],
+          action_required: `Rotate ${provider.toUpperCase()} API key — all requests to this provider will fail until fixed`,
+        });
+        await persistError({
+          request_id: requestId,
+          stage:      'model_call',
+          status:     'critical',
+          provider,
+          model:      MODELS[provider],
+          error_type: 'CRITICAL_AUTH_FAILURE',
+          error_msg:  lastError.message,
+        });
+        throw lastError;
+      }
 
       const isRateLimit =
         e?.status === 429 ||
@@ -227,7 +282,8 @@ async function callProvider(
   }
 
   // ── GEMINI ────────────────────────────────────────────────────────────────
-  if (['gemini_p', 'gemini_f', 'gemini_lite'].includes(provider)) {
+  if (['gemini_f', 'gemini_p', 'gemini_fl', 'gemini_lite',
+       'gemini_preview', 'gemini_latest', 'gemini_litelast'].includes(provider)) {
     const genAI  = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
     const model  = genAI.getGenerativeModel({ model: MODELS[provider] });
     const result = await model.generateContent([{ text: system }, { text: user }]);
@@ -239,7 +295,9 @@ async function callProvider(
 }
 
 // ── Vision-specific Gemini call (used by scan route) ────────────────────────
-const VISION_MODELS: AIProvider[] = ['gemini_p', 'gemini_f'];
+// Vision must stay within Gemini — Groq/Cerebras/SambaNova have no image input.
+// gemini_f (2.5-flash) is strongest vision model, use as primary.
+const VISION_MODELS: AIProvider[] = ['gemini_f', 'gemini_p', 'gemini_fl'];
 
 export async function callGeminiVision(
   imageBase64: string,

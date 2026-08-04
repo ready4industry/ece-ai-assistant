@@ -32,10 +32,24 @@ export async function POST(req: NextRequest) {
   }
 
   // ── Rate limit ────────────────────────────────────────────────────────────────
-  const { success: ratePassed } = await ratelimit.limit(userId);
-  if (!ratePassed) {
-    logger.log({ request_id: requestId, stage: 'rate_limit', status: 'warn', details: { user_id: userId } });
-    return NextResponse.json({ error: 'Rate limit exceeded. Max 20 requests per hour.' }, { status: 429 });
+  // Wrapped in try-catch: @upstash/ratelimit sliding window has a known null-arg
+  // Lua script incompatibility with certain @upstash/redis versions. Fail open
+  // (allow request) if Upstash itself errors — rate limiting is non-critical
+  // infrastructure and must never block the core AI path.
+  try {
+    const { success: ratePassed } = await ratelimit.limit(userId);
+    if (!ratePassed) {
+      logger.log({ request_id: requestId, stage: 'rate_limit', status: 'warn', details: { user_id: userId } });
+      return NextResponse.json({ error: 'Rate limit exceeded. Max 20 requests per hour.' }, { status: 429 });
+    }
+  } catch (rlErr) {
+    logger.log({
+      request_id: requestId,
+      stage:      'rate_limit',
+      status:     'warn',
+      details:    { reason: 'ratelimit_infra_error_fail_open', error: String(rlErr) },
+    });
+    // Fail open — continue processing the request
   }
 
   // ── Parse body ────────────────────────────────────────────────────────────────
@@ -94,7 +108,8 @@ export async function POST(req: NextRequest) {
       year_of_study: userYear,
       subject:       subject ?? '',
       topic_slug:    packet.topic_slug ?? '',
-      provider:      'groq', // probe generator
+      provider:      'groq_27b', // probe generator
+      response_json: null,
       tokens_used:   0,
       release_level: packet.release_level,
       engagement_delta: 0,
@@ -138,7 +153,7 @@ export async function POST(req: NextRequest) {
     session_id:       sessionId, // GapFix Gap 14
     request_id:       requestId,
     query_text:       query,
-    response_text:    aiResult.text,
+    response_json:    JSON.stringify({ text: aiResult.text }),
     mode,
     year_of_study:    userYear,
     subject:          subject ?? '',
