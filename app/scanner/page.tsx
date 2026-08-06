@@ -17,21 +17,24 @@ export default function ScannerPage() {
   const sessionId = `scan-${Date.now()}`;
 
   return (
-    <div className="flex flex-col h-screen bg-background">
+    <div className="flex flex-col h-screen bg-[#f8faf7] font-sans">
       <Topbar title="Circuit Scanner" />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar />
 
-        <main className="flex-1 overflow-y-auto p-6 max-w-4xl mx-auto w-full space-y-6">
-          <div className="flex flex-wrap items-center gap-4">
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 max-w-5xl mx-auto w-full space-y-6">
+          <div className="flex flex-wrap items-center justify-between gap-4 bg-surface-container-lowest border border-primary/15 p-5 rounded-2xl shadow-[0px_4px_20px_rgba(0,83,68,0.06)]">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">Visual diagnostics</p>
-              <h1 className="mt-1 text-2xl font-semibold text-on-surface">Circuit Scanner</h1>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#41FDA8]" />
+                <p className="text-xs font-bold uppercase tracking-wider text-primary">Visual Diagnostics & Schematic OCR</p>
+              </div>
+              <h1 className="text-2xl font-bold text-on-surface">Circuit Scanner AI</h1>
             </div>
             <YearSelector value={year} onChange={setYear} />
           </div>
 
-          <div className="stitch-card p-6">
+          <div className="bg-surface-container-lowest border border-primary/15 rounded-2xl p-6 shadow-[0px_4px_20px_rgba(0,83,68,0.08)]">
             <ScanUploader
               year={year}
               sessionId={sessionId}
@@ -41,19 +44,19 @@ export default function ScannerPage() {
           </div>
 
           {error && (
-            <div className="bg-error/10 text-error rounded-lg px-4 py-3 text-sm">{error}</div>
+            <div className="bg-error-container text-on-error-container rounded-xl px-4 py-3 text-sm font-medium border border-error/20">{error}</div>
           )}
 
           {analysis && (
             <div className="space-y-4">
               {imageUrl && (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={imageUrl} alt="Uploaded circuit" className="max-h-64 rounded-xl object-contain border border-outline-variant" />
+                <img src={imageUrl} alt="Uploaded circuit" className="max-h-72 rounded-2xl object-contain border border-primary/20 bg-surface-container-low shadow-sm" />
               )}
               <OutputPanel
                 text={analysis}
                 queryId={null}
-                provider="gemini"
+                provider="gemini-vision"
               />
             </div>
           )}
@@ -62,3 +65,4 @@ export default function ScannerPage() {
     </div>
   );
 }
+

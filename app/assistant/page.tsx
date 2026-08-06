@@ -33,12 +33,8 @@ export default function AssistantPage() {
   const [loading,    setLoading]    = useState(false);
   const [sessionId]  = useState(() => `${Date.now()}-${Math.random().toString(36).slice(2)}`);
 
-  // Tab key: "code:arduino", "code:esp32" etc. for code mode,
-  // plain mode string for all other modes.
-  // This gives each controller its own independent history within code mode.
   const tabKey = mode === 'code' ? `code:${controller}` : mode;
 
-  // Derived state for current tab
   const messages       = allMessages[tabKey] ?? [];
   const pendingProbeId = allProbeIds[tabKey] ?? null;
 
@@ -108,46 +104,68 @@ export default function AssistantPage() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-background">
-      <Topbar />
+    <div className="flex flex-col h-screen bg-[#f8faf7] font-sans">
+      <Topbar title="AI Assistant Workspace" />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar />
 
-        <main className="flex-1 flex flex-col overflow-hidden p-4 gap-4 max-w-4xl mx-auto w-full">
-          {/* Controls */}
-          <div className="stitch-card flex flex-col gap-3 p-4">
+        <main className="flex-1 flex flex-col overflow-hidden p-4 md:p-6 gap-4 max-w-5xl mx-auto w-full">
+          {/* Controls Bar */}
+          <div className="bg-surface-container-lowest border border-primary/15 shadow-[0px_4px_20px_rgba(0,83,68,0.06)] rounded-2xl p-4 flex flex-col gap-3">
+            <div className="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-primary/10">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#41FDA8]" />
+                <span className="text-xs font-bold text-primary uppercase tracking-wider">Engineering Intelligence Hub</span>
+              </div>
+              <span className="text-[11px] font-mono text-on-surface-variant">Socratic Mode Active</span>
+            </div>
             <div className="flex items-center gap-4 flex-wrap">
               <YearSelector value={year} onChange={setYear} />
-              <div className="w-px h-6 bg-outline-variant" />
+              <div className="w-px h-6 bg-primary/15" />
               <ModeSelector value={mode} onChange={setMode} />
             </div>
             {mode === 'code' && (
-              <ControllerSelector value={controller} onChange={setController} />
+              <div className="pt-2 border-t border-primary/10">
+                <ControllerSelector value={controller} onChange={setController} />
+              </div>
             )}
           </div>
 
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto space-y-4">
+          <div className="flex-1 overflow-y-auto space-y-4 pr-1">
             {messages.length === 0 && (
-              <div className="flex flex-col items-center justify-center h-full gap-3 text-center px-8">
-                <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center">
-                  <span className="text-3xl">⚡</span>
+              <div className="flex flex-col items-center justify-center h-full gap-4 text-center px-8 py-12">
+                <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center text-on-primary shadow-md border border-primary/20">
+                  <span className="text-3xl font-bold">⚡</span>
                 </div>
-                <h2 className="text-lg font-medium text-on-surface">ECE Lab Pro</h2>
-                <p className="text-sm text-on-surface-variant max-w-xs">
-                  Ask about circuits, code, signals, embedded systems, or anything in your ECE syllabus.
-                </p>
+                <div className="space-y-1 max-w-md">
+                  <h2 className="text-xl font-bold text-primary">ECE Lab Pro AI Workspace</h2>
+                  <p className="text-xs text-on-surface-variant leading-relaxed">
+                    Ask technical questions on schematics, circuit diagnostics, embedded firmware, Verilog RTL, or literature reviews.
+                  </p>
+                </div>
+                <div className="flex flex-wrap justify-center gap-2 max-w-lg pt-2">
+                  {['ESP32 I2C OLED Init', 'Op-Amp Filter Design', 'Verilog 4-bit ALU', 'STM32 Timer Interrupts'].map((topicText) => (
+                    <button
+                      key={topicText}
+                      onClick={() => { setQuery(topicText); sendQuery(topicText); }}
+                      className="text-xs font-mono bg-surface-container-lowest border border-primary/20 hover:border-[#41FDA8] text-primary px-3 py-1.5 rounded-xl transition-all shadow-sm"
+                    >
+                      {topicText} ➔
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
 
             {messages.map((msg, i) => (
               <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 {msg.role === 'user' ? (
-                  <div className="bg-primary text-on-primary rounded-2xl rounded-tr-sm px-4 py-2.5 max-w-lg text-sm">
+                  <div className="bg-primary text-on-primary rounded-2xl rounded-tr-sm px-4 py-3 max-w-xl text-sm shadow-sm font-sans">
                     {msg.text}
                   </div>
                 ) : (
-                  <div className="flex-1 max-w-2xl">
+                  <div className="flex-1 max-w-3xl">
                     <OutputPanel
                       text={msg.text}
                       queryId={msg.queryId}
