@@ -51,7 +51,10 @@ export default function HistoryPage() {
       <div className="flex flex-1 overflow-hidden">
         <Sidebar />
         <main className="flex-1 overflow-y-auto p-6 max-w-4xl mx-auto w-full space-y-4">
-          <h1 className="text-lg font-semibold text-on-surface">Query History</h1>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">Engineering activity</p>
+            <h1 className="mt-1 text-2xl font-semibold text-on-surface">Query History</h1>
+          </div>
 
           {loading ? (
             <div className="flex justify-center py-12">
@@ -62,10 +65,10 @@ export default function HistoryPage() {
           ) : (
             <div className="space-y-2">
               {queries.map(q => (
-                <div key={q.id} className="bg-surface rounded-xl border border-outline-variant overflow-hidden">
+                <div key={q.id} className="stitch-card overflow-hidden">
                   <button
                     onClick={() => setExpanded(expanded === q.id ? null : q.id)}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-surface-container transition-colors"
+                    className="stitch-focus w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-surface-container transition-colors"
                   >
                     <span className="text-base">{MODE_ICONS[q.mode] ?? '💬'}</span>
                     <div className="flex-1 min-w-0">

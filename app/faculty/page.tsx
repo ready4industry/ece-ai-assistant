@@ -8,10 +8,12 @@ import { CohortIntelligence }  from '@/components/faculty/CohortIntelligence';
 import { SyllabusManager }     from '@/components/faculty/SyllabusManager';
 import { ProbeStudio }         from '@/components/faculty/ProbeStudio';
 import { ResearchOutput }      from '@/components/faculty/ResearchOutput';
+import { QueryReview }         from '@/components/faculty/QueryReview';
 
-type Tab = 'live' | 'cohort' | 'syllabus' | 'probe' | 'research';
+type Tab = 'live' | 'cohort' | 'syllabus' | 'probe' | 'research' | 'queries';
 
 const TABS: Array<{ id: Tab; label: string; icon: string }> = [
+  { id: 'queries',  label: 'Query Review',        icon: 'Review' },
   { id: 'live',     label: 'Live Classroom',      icon: '🟢' },
   { id: 'cohort',   label: 'Cohort Intelligence', icon: '📊' },
   { id: 'syllabus', label: 'Syllabus Manager',    icon: '📋' },
@@ -94,6 +96,7 @@ export default function FacultyPage() {
         {activeTab === 'syllabus' && <SyllabusManager  />}
         {activeTab === 'probe'    && <ProbeStudio      />}
         {activeTab === 'research' && <ResearchOutput   data={dashData} />}
+        {activeTab === 'queries'  && <QueryReview />}
       </div>
     </div>
   );

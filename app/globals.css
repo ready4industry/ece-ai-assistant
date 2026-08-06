@@ -4,19 +4,23 @@
 
 @layer base {
   :root {
-    --color-background:              #f8f9fc;
-    --color-surface:                 #ffffff;
-    --color-surface-container:       #f2f4f7;
-    --color-surface-container-low:   #f9fafb;
-    --color-surface-container-high:  #e8eaed;
+    /* Stitch: Academic Engineering Precision */
+    --color-background:              #f8faf7;
+    --color-surface:                 #f8faf7;
+    --color-surface-container:       #eceeec;
+    --color-surface-container-low:   #f2f4f1;
+    --color-surface-container-high:  #e6e9e6;
+    --color-surface-container-lowest: #ffffff;
     --color-primary:                 #005344;
     --color-on-primary:              #ffffff;
     --color-secondary-container:     #41fda8;
     --color-on-secondary-container:  #003825;
     --color-tertiary:                #7c5800;
-    --color-outline-variant:         #dde2eb;
-    --color-on-surface:              #181c20;
-    --color-on-surface-variant:      #43474e;
+    --color-outline-variant:         #bfc9c4;
+    --color-outline:                 #6f7975;
+    --color-on-surface:              #191c1b;
+    --color-on-surface-variant:      #3f4945;
+    --shadow-card:                   0 4px 20px rgb(0 83 68 / 8%);
   }
 
   * {
@@ -25,10 +29,25 @@
 
   body {
     font-family: var(--font-inter, system-ui, sans-serif);
+    background: var(--color-background);
   }
 
   code, pre {
     font-family: var(--font-mono, 'Courier New', monospace);
+  }
+}
+
+@layer utilities {
+  .stitch-card {
+    border: 1px solid rgb(0 83 68 / 15%);
+    border-radius: 1.5rem;
+    background: var(--color-surface-container-lowest);
+    box-shadow: var(--shadow-card);
+  }
+
+  .stitch-focus:focus-visible {
+    outline: 2px solid #41fda8;
+    outline-offset: 2px;
   }
 }
 

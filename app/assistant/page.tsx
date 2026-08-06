@@ -115,7 +115,7 @@ export default function AssistantPage() {
 
         <main className="flex-1 flex flex-col overflow-hidden p-4 gap-4 max-w-4xl mx-auto w-full">
           {/* Controls */}
-          <div className="flex flex-col gap-3 bg-surface rounded-xl p-4 border border-outline-variant">
+          <div className="stitch-card flex flex-col gap-3 p-4">
             <div className="flex items-center gap-4 flex-wrap">
               <YearSelector value={year} onChange={setYear} />
               <div className="w-px h-6 bg-outline-variant" />

@@ -23,12 +23,15 @@ export default function ScannerPage() {
         <Sidebar />
 
         <main className="flex-1 overflow-y-auto p-6 max-w-4xl mx-auto w-full space-y-6">
-          <div className="flex items-center gap-4">
-            <h1 className="text-lg font-semibold text-on-surface">Circuit & Waveform Scanner</h1>
+          <div className="flex flex-wrap items-center gap-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">Visual diagnostics</p>
+              <h1 className="mt-1 text-2xl font-semibold text-on-surface">Circuit Scanner</h1>
+            </div>
             <YearSelector value={year} onChange={setYear} />
           </div>
 
-          <div className="bg-surface rounded-xl border border-outline-variant p-6">
+          <div className="stitch-card p-6">
             <ScanUploader
               year={year}
               sessionId={sessionId}

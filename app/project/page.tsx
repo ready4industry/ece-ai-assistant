@@ -45,7 +45,7 @@ export default function ProjectPage() {
       <div className="flex flex-1 overflow-hidden">
         <Sidebar />
         <main className="flex-1 flex flex-col overflow-hidden p-4 gap-4 max-w-4xl mx-auto w-full">
-          <div className="flex items-center gap-4 bg-surface rounded-xl p-3 border border-outline-variant">
+          <div className="stitch-card flex items-center gap-4 p-3">
             <span className="text-sm text-on-surface-variant">Year:</span>
             <YearSelector value={year} onChange={setYear} />
           </div>

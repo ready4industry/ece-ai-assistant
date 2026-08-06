@@ -50,14 +50,17 @@ export default function ProgressPage() {
       <div className="flex flex-1 overflow-hidden">
         <Sidebar />
         <main className="flex-1 overflow-y-auto p-6 max-w-4xl mx-auto w-full space-y-6">
-          <h1 className="text-lg font-semibold text-on-surface">Knowledge Progress</h1>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">Learning telemetry</p>
+            <h1 className="mt-1 text-2xl font-semibold text-on-surface">Knowledge Progress</h1>
+          </div>
 
           {loading ? (
             <div className="flex justify-center py-12">
               <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
             </div>
           ) : metrics.length === 0 ? (
-            <div className="bg-surface rounded-xl border border-outline-variant p-8 text-center">
+            <div className="stitch-card p-8 text-center">
               <p className="text-sm text-on-surface-variant">
                 Progress data is computed weekly from your probe responses.
                 Answer more Socratic probes to see your topic mastery here.
@@ -66,7 +69,7 @@ export default function ProgressPage() {
           ) : (
             <div className="space-y-3">
               {metrics.map(m => (
-                <div key={m.topic_slug} className="bg-surface rounded-xl border border-outline-variant p-4">
+                <div key={m.topic_slug} className="stitch-card p-4">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm font-medium text-on-surface">{m.topic_slug.replace(/_/g, ' ')}</span>
                     <span className={`text-sm font-semibold ${scoreColor(m.score)}`}>{m.score}%</span>

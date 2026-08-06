@@ -45,7 +45,7 @@ export function LiveClassroom({ data, onRefresh }: LiveClassroomProps) {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Query mode breakdown */}
-        <div className="bg-surface rounded-xl border border-outline-variant p-5">
+        <div className="stitch-card p-5">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-semibold text-on-surface">Queries by Mode (24h)</h2>
             <button onClick={onRefresh} className="text-xs text-primary hover:underline">Refresh</button>
@@ -73,7 +73,7 @@ export function LiveClassroom({ data, onRefresh }: LiveClassroomProps) {
         </div>
 
         {/* Socratic Probe Monitor — hardest topics */}
-        <div className="bg-surface rounded-xl border border-outline-variant p-5">
+        <div className="stitch-card p-5">
           <h2 className="text-sm font-semibold text-on-surface mb-4">Socratic Probe Monitor</h2>
           <p className="text-xs text-on-surface-variant mb-3">Topics with most &quot;honest_confusion&quot; probe responses:</p>
           {hardestTopics.length === 0 ? (
@@ -96,7 +96,7 @@ export function LiveClassroom({ data, onRefresh }: LiveClassroomProps) {
 
       {/* Open Flags */}
       {openFlags.length > 0 && (
-        <div className="bg-surface rounded-xl border border-red-200 p-5">
+        <div className="stitch-card border-red-200 p-5">
           <h2 className="text-sm font-semibold text-red-700 mb-4">⚑ Open Flags ({openFlags.length})</h2>
           <div className="space-y-2 max-h-64 overflow-y-auto">
             {openFlags.map(flag => (
@@ -118,7 +118,7 @@ export function LiveClassroom({ data, onRefresh }: LiveClassroomProps) {
 
 function StatCard({ label, value, accent }: { label: string; value: string; accent: string }) {
   return (
-    <div className="bg-surface rounded-xl border border-outline-variant p-4">
+    <div className="stitch-card p-4">
       <p className="text-xs text-on-surface-variant mb-1">{label}</p>
       <p className={`text-2xl font-bold ${accent}`}>{value}</p>
     </div>
