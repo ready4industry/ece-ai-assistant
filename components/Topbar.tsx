@@ -22,10 +22,10 @@ export function Topbar({ title = 'ECE Lab Pro' }: TopbarProps) {
   return (
     <header className="h-14 bg-primary flex items-center justify-between px-4 shadow-md">
       <div className="flex items-center gap-3">
-        <div className="w-7 h-7 bg-secondary-container rounded flex items-center justify-center">
-          <span className="text-primary text-xs font-bold">E</span>
+        <div className="w-7 h-7 bg-[#41FDA8] rounded-md flex items-center justify-center text-[#003a2f] shadow-sm">
+          <span className="text-xs font-bold">⚡</span>
         </div>
-        <span className="text-on-primary font-semibold text-sm">{title}</span>
+        <span className="text-on-primary font-bold text-sm tracking-tight">{title}</span>
       </div>
 
       {user && (
