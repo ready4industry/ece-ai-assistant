@@ -9,8 +9,13 @@ const sessionKey  = (sid: string) => `ece:session:${sid}`;
 
 export async function loadSession(sessionId: string): Promise<SessionState | null> {
   if (!redis) return null;
-  const raw = await redis.get<SessionState>(sessionKey(sessionId));
-  return raw ?? null;
+  try {
+    const raw = await redis.get<SessionState>(sessionKey(sessionId));
+    return raw ?? null;
+  } catch (err) {
+    console.warn('loadSession redis error:', err);
+    return null;
+  }
 }
 
 export async function createSession(
@@ -32,7 +37,11 @@ export async function createSession(
     last_activity:    Date.now(),
   };
   if (redis) {
-    await redis.set(sessionKey(sessionId), state, { ex: SESSION_TTL });
+    try {
+      await redis.set(sessionKey(sessionId), state, { ex: SESSION_TTL });
+    } catch (err) {
+      console.warn('createSession redis error:', err);
+    }
   }
   return state;
 }
@@ -42,14 +51,18 @@ export async function updateSession(
   updates:   Partial<SessionState>,
 ): Promise<void> {
   if (!redis) return;
-  const existing = await loadSession(sessionId);
-  if (!existing) return;
-  const updated: SessionState = {
-    ...existing,
-    ...updates,
-    last_activity: Date.now(),
-  };
-  await redis.set(sessionKey(sessionId), updated, { ex: SESSION_TTL });
+  try {
+    const existing = await loadSession(sessionId);
+    if (!existing) return;
+    const updated: SessionState = {
+      ...existing,
+      ...updates,
+      last_activity: Date.now(),
+    };
+    await redis.set(sessionKey(sessionId), updated, { ex: SESSION_TTL });
+  } catch (err) {
+    console.warn('updateSession redis error:', err);
+  }
 }
 
 // Update engagement score as rolling average

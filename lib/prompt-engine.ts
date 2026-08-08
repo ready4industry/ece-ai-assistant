@@ -154,20 +154,35 @@ async function lookupTopicByKeyword(
   raw:  string,
   year: YearOfStudy,
 ): Promise<ClassifyResult['topicMatch']> {
-  const lower = raw.toLowerCase();
-  const { data } = await supabase
-    .from('syllabus_topics')
-    .select('topic, topic_slug, complexity, prerequisites, keywords')
-    .eq('year', year)
-    .limit(20);
+  try {
+    const lower = raw.toLowerCase();
+    const { data } = await supabase
+      .from('syllabus_topics')
+      .select('topic, topic_slug, complexity, prerequisites, keywords')
+      .eq('year', year)
+      .limit(20);
 
-  if (!data) return null;
-  for (const row of data) {
-    if ((row.keywords as string[])?.some(k => lower.includes(k.toLowerCase()))) {
-      return { topic: row.topic, slug: row.topic_slug, complexity: row.complexity ?? 5, prerequisites: row.prerequisites ?? [] };
+    if (!data) return null;
+    for (const row of data) {
+      const keywords = Array.isArray(row.keywords)
+        ? row.keywords
+        : typeof row.keywords === 'string'
+        ? (row.keywords as string).split(',').map(s => s.trim())
+        : [];
+      if (keywords.some(k => typeof k === 'string' && lower.includes(k.toLowerCase()))) {
+        return {
+          topic: row.topic,
+          slug: row.topic_slug,
+          complexity: row.complexity ?? 5,
+          prerequisites: Array.isArray(row.prerequisites) ? row.prerequisites : [],
+        };
+      }
     }
+    return null;
+  } catch (err) {
+    console.warn('lookupTopicByKeyword error:', err);
+    return null;
   }
-  return null;
 }
 
 function inferIntentFromTopic(topic: string, raw: string): IntentType {
@@ -201,16 +216,17 @@ export async function buildPromptPacket(
   requestId:   string,
   probeAnswer?: string, // if student is answering a pending probe
 ): Promise<PromptPacket & { signalNudge?: string; probeToShow?: string; probeId?: string }> {
-  // ── L1: Signal validation ─────────────────────────────────────────────────
-  const signal = validateSignal(rawQuery);
-  logger.log({
-    request_id: requestId, stage: 'signal_validation', status: signal.valid ? 'success' : 'warn',
-    details: { reason: signal.reason, query_length: rawQuery.length },
-  });
+  try {
+    // ── L1: Signal validation ─────────────────────────────────────────────────
+    const signal = validateSignal(rawQuery);
+    logger.log({
+      request_id: requestId, stage: 'signal_validation', status: signal.valid ? 'success' : 'warn',
+      details: { reason: signal.reason, query_length: rawQuery.length },
+    });
 
-  if (!signal.valid) {
-    return buildMinimalPacket(rawQuery, year, subject, { signalNudge: signal.nudge });
-  }
+    if (!signal.valid) {
+      return buildMinimalPacket(rawQuery, year, subject, { signalNudge: signal.nudge });
+    }
 
   // ── L2: Session load ──────────────────────────────────────────────────────
   let session = await loadSession(sessionId);
@@ -305,11 +321,15 @@ export async function buildPromptPacket(
     };
   }
 
-  return buildFullPacket({
-    rawQuery, year, subject, intent, cognitiveOp,
-    topicMatch, session, complexity, knowledgeCtx,
-    releaseLevel: session.release_level,
-  });
+    return buildFullPacket({
+      rawQuery, year, subject, intent, cognitiveOp,
+      topicMatch, session, complexity, knowledgeCtx,
+      releaseLevel: session.release_level,
+    });
+  } catch (err) {
+    logger.failure(requestId, 'prompt_engine_top_fallback', err, { step: 'build_packet_exception' });
+    return buildMinimalPacket(rawQuery, year, subject);
+  }
 }
 
 function buildFullPacket(args: {

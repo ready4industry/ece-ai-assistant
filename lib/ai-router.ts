@@ -14,17 +14,17 @@ import { checkProviderBudget, trackProviderTokens } from './ratelimit';
 export const MODELS: Record<AIProvider, string> = {
   groq_70b:    'llama-3.3-70b-versatile',
   groq_8b:     'llama-3.1-8b-instant',
-  groq_qwen:   'qwen/qwen3-32b',
-  groq_27b:    'qwen/qwen3.6-27b',
-  groq_120b:   'openai/gpt-oss-120b',
-  cerebras:    'gpt-oss-120b',
-  cerebras_b:  'zai-glm-4.7',
-  sn_verilog:  'gpt-oss-120b',
-  sn_research: 'DeepSeek-V3.1',
+  groq_qwen:   'qwen-2.5-32b',
+  groq_27b:    'llama-3.3-70b-versatile',
+  groq_120b:   'llama-3.3-70b-versatile',
+  cerebras:    'llama3.1-70b',
+  cerebras_b:  'llama3.1-70b',
+  sn_verilog:  'Meta-Llama-3.3-70B-Instruct',
+  sn_research: 'Meta-Llama-3.3-70B-Instruct',
   sn_reserve:  'Meta-Llama-3.3-70B-Instruct',
-  gemini_p:    'gemini-3.5-flash',
-  gemini_f:    'gemini-2.5-flash',
-  gemini_lite: 'gemini-3.1-flash-lite',
+  gemini_p:    'gemini-2.0-flash',
+  gemini_f:    'gemini-2.0-flash',
+  gemini_lite: 'gemini-2.0-flash',
 } as const;
 
 // ── Routes (Live Model Verification §7) ────────────────────────────────────
@@ -114,15 +114,13 @@ export async function generate(
         e?.status === 503 || e?.status === 502 ||
         e?.message?.toLowerCase().includes('unavailable');
 
-      const shouldFallback = isRateLimit || isUnavailable;
-
       const reason = isRateLimit
         ? 'rate_limited'
         : isUnavailable
         ? 'service_unavailable'
-        : 'non_retryable_error';
+        : 'provider_error';
 
-      logger.modelCall(requestId, provider, MODELS[provider], shouldFallback ? 'fallback' : 'failure', {
+      logger.modelCall(requestId, provider, MODELS[provider], 'fallback', {
         error_type: lastError.name,
         error_msg:  lastError.message,
         reason,
@@ -139,15 +137,11 @@ export async function generate(
         error_msg:  lastError.message,
       });
 
-      if (shouldFallback) {
-        const nextIdx = providers.indexOf(provider) + 1;
-        if (nextIdx < providers.length) {
-          logger.fallback(requestId, 'model_call', provider, reason, providers[nextIdx]);
-        }
-        continue;
+      const nextIdx = providers.indexOf(provider) + 1;
+      if (nextIdx < providers.length) {
+        logger.fallback(requestId, 'model_call', provider, reason, providers[nextIdx]);
       }
-      // Non-retryable: throw immediately
-      throw err;
+      continue;
     }
   }
 
