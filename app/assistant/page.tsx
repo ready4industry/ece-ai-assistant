@@ -83,14 +83,18 @@ export default function AssistantPage() {
       if (data.type === 'probe') {
         setPendingProbeId(data.probe_id ?? null);
         appendMessage({
-          role: 'assistant', text: '', isProbe: true,
-          queryId: data.query_id, probeId: data.probe_id,
+          role:         'assistant',
+          text:         data.probe_question ?? 'Knowledge Check: Please explain your understanding of this concept.',
+          isProbe:      true,
+          queryId:      data.query_id,
+          probeId:      data.probe_id,
+          topic:        data.topic,
         });
       } else {
         setPendingProbeId(null);
         appendMessage({
           role:         'assistant',
-          text:         data.text,
+          text:         data.text || 'No response content returned. Please try again.',
           queryId:      data.query_id,
           provider:     data.provider,
           releaseLevel: data.release_level,
@@ -106,7 +110,8 @@ export default function AssistantPage() {
   }, [user, loading, mode, year, controller, sessionId]);
 
   function handleProbeAnswer(answer: string) {
-    sendQuery((query || (messages.find(m => m.role === 'user')?.text ?? '')), answer);
+    const lastUserMsg = [...messages].reverse().find(m => m.role === 'user')?.text ?? query;
+    sendQuery(lastUserMsg, answer);
   }
 
   return (
@@ -178,7 +183,7 @@ export default function AssistantPage() {
                       provider={msg.provider}
                       releaseLevel={msg.releaseLevel}
                       topic={msg.topic}
-                      probeText={msg.isProbe ? (messages.find(m => m.role === 'assistant' && m.isProbe)?.text ?? null) : null}
+                      probeText={msg.isProbe ? msg.text : null}
                       onProbeAnswer={msg.isProbe ? handleProbeAnswer : undefined}
                     />
                   </div>
