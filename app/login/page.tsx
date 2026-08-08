@@ -1,6 +1,6 @@
 'use client';
 
-import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider } from 'firebase/auth';
 import { firebaseAuth } from '@/lib/firebase-client';
 import { useRouter }    from 'next/navigation';
 import { useAuth }      from '@/components/AuthProvider';
@@ -13,7 +13,23 @@ export default function LoginPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && user) router.replace('/assistant');
+    if (!loading && user) {
+      router.replace('/assistant');
+      return;
+    }
+
+    getRedirectResult(firebaseAuth)
+      .then((result) => {
+        if (result?.user) {
+          router.replace('/assistant');
+        }
+      })
+      .catch((err) => {
+        console.error('Redirect sign-in error:', err);
+        if (err instanceof Error) {
+          setAuthError(err.message);
+        }
+      });
   }, [user, loading, router]);
 
   async function handleGoogleSignIn() {
@@ -25,8 +41,20 @@ export default function LoginPage() {
       router.replace('/assistant');
     } catch (err: unknown) {
       console.error('Sign-in failed', err);
-      const message = err instanceof Error ? err.message : 'Authentication failed';
-      setAuthError(message);
+      const isPopupErr = err && typeof err === 'object' && 'code' in err && 
+        (err.code === 'auth/popup-blocked' || err.code === 'auth/popup-closed-by-user');
+      if (isPopupErr) {
+        try {
+          await signInWithRedirect(firebaseAuth, provider);
+          return;
+        } catch (redirectErr: unknown) {
+          const msg = redirectErr instanceof Error ? redirectErr.message : 'Authentication failed';
+          setAuthError(msg);
+        }
+      } else {
+        const message = err instanceof Error ? err.message : 'Authentication failed';
+        setAuthError(message);
+      }
     } finally {
       setSigningIn(false);
     }

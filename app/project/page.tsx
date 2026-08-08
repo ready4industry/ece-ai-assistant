@@ -1,6 +1,7 @@
 'use client';
 
 import { useState }     from 'react';
+import { useRouter }    from 'next/navigation';
 import { Topbar }       from '@/components/Topbar';
 import { Sidebar }      from '@/components/Sidebar';
 import { YearSelector } from '@/components/YearSelector';
@@ -12,6 +13,7 @@ interface Message { role: 'user' | 'assistant'; text: string; queryId?: string |
 
 export default function ProjectPage() {
   const { user }   = useAuth();
+  const router     = useRouter();
   const [year, setYear] = useState<1|2|3|4>(4);
   const [query, setQuery]     = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
@@ -19,7 +21,11 @@ export default function ProjectPage() {
   const sessionId = `proj-${Date.now()}`;
 
   async function send() {
-    if (!user || !query.trim() || loading) return;
+    if (!query.trim() || loading) return;
+    if (!user) {
+      router.push('/login');
+      return;
+    }
     setMessages(prev => [...prev, { role: 'user', text: query }]);
     setLoading(true);
     try {

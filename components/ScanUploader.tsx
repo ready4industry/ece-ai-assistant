@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import { useRouter }          from 'next/navigation';
 import { useAuth }          from './AuthProvider';
 
 interface ScanUploaderProps {
@@ -12,6 +13,7 @@ interface ScanUploaderProps {
 
 export function ScanUploader({ year, sessionId, onResult, onError }: ScanUploaderProps) {
   const { user }            = useAuth();
+  const router              = useRouter();
   const inputRef            = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [query, setQuery]   = useState('');
@@ -25,7 +27,11 @@ export function ScanUploader({ year, sessionId, onResult, onError }: ScanUploade
   }
 
   async function handleSubmit() {
-    if (!inputRef.current?.files?.[0] || !user) return;
+    if (!inputRef.current?.files?.[0]) return;
+    if (!user) {
+      router.push('/login');
+      return;
+    }
 
     setLoading(true);
     try {

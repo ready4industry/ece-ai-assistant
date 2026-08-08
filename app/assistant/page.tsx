@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import { useRouter }            from 'next/navigation';
 import { Topbar }              from '@/components/Topbar';
 import { Sidebar }             from '@/components/Sidebar';
 import { ControllerSelector }  from '@/components/ControllerSelector';
@@ -23,6 +24,7 @@ interface Message {
 
 export default function AssistantPage() {
   const { user } = useAuth();
+  const router   = useRouter();
 
   const [year,       setYear]       = useState<1|2|3|4>(1);
   const [controller, setController] = useState('arduino');
@@ -45,7 +47,11 @@ export default function AssistantPage() {
     setAllProbeIds(prev => ({ ...prev, [tabKey]: id }));
 
   const sendQuery = useCallback(async (queryText: string, probeAnswer?: string) => {
-    if (!user || loading || !queryText.trim()) return;
+    if (loading || !queryText.trim()) return;
+    if (!user) {
+      router.push('/login');
+      return;
+    }
 
     setLoading(true);
     appendMessage({ role: 'user', text: probeAnswer ? `[Probe answer] ${probeAnswer}` : queryText });

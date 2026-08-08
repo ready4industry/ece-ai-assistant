@@ -8,6 +8,7 @@ const SESSION_TTL = 604800; // 7 days in seconds
 const sessionKey  = (sid: string) => `ece:session:${sid}`;
 
 export async function loadSession(sessionId: string): Promise<SessionState | null> {
+  if (!redis) return null;
   const raw = await redis.get<SessionState>(sessionKey(sessionId));
   return raw ?? null;
 }
@@ -30,7 +31,9 @@ export async function createSession(
     last_topic_slug:  null,
     last_activity:    Date.now(),
   };
-  await redis.set(sessionKey(sessionId), state, { ex: SESSION_TTL });
+  if (redis) {
+    await redis.set(sessionKey(sessionId), state, { ex: SESSION_TTL });
+  }
   return state;
 }
 
@@ -38,6 +41,7 @@ export async function updateSession(
   sessionId: string,
   updates:   Partial<SessionState>,
 ): Promise<void> {
+  if (!redis) return;
   const existing = await loadSession(sessionId);
   if (!existing) return;
   const updated: SessionState = {

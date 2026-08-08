@@ -28,7 +28,7 @@ export function Topbar({ title = 'ECE Lab Pro' }: TopbarProps) {
         <span className="text-on-primary font-bold text-sm tracking-tight">{title}</span>
       </div>
 
-      {user && (
+      {user ? (
         <div className="flex items-center gap-3">
           {user.photoURL && (
             <Image
@@ -49,6 +49,13 @@ export function Topbar({ title = 'ECE Lab Pro' }: TopbarProps) {
             Sign out
           </button>
         </div>
+      ) : (
+        <button
+          onClick={() => router.push('/login')}
+          className="bg-[#41FDA8] hover:bg-[#20e990] text-[#003a2f] text-xs font-bold px-3 py-1.5 rounded-lg transition-colors shadow-sm"
+        >
+          Sign In
+        </button>
       )}
     </header>
   );

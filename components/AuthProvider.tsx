@@ -39,11 +39,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (pathname === '/login') {
           router.replace('/assistant');
         }
+      } else {
+        if (pathname !== '/login') {
+          router.replace('/login');
+        }
       }
     });
 
     return () => unsub();
   }, [router, pathname]);
+
+  if (loading || (!user && pathname !== '/login')) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-[#f8faf7]">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin" />
+          <p className="text-xs font-semibold text-primary font-sans">Connecting to ECE Lab Pro...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <AuthContext.Provider value={{ user, loading }}>
@@ -55,3 +70,4 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 export function useAuth() {
   return useContext(AuthContext);
 }
+
