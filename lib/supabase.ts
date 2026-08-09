@@ -1,4 +1,6 @@
-import 'server-only';
+if (typeof window !== 'undefined') {
+  throw new Error('Supabase service role client cannot be used in client components');
+}
 import { createClient } from '@supabase/supabase-js';
 
 export const supabase = createClient(

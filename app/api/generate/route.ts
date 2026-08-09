@@ -103,10 +103,12 @@ export async function POST(req: NextRequest) {
     logger.success(requestId, 'api_generate', { step: 'probe_issued', query_id: queryRow?.id });
 
     return NextResponse.json({
-      type:     'probe',
-      probe:    packet.probeToShow,
-      probe_id: packet.probeId ?? null,
-      query_id: queryRow?.id ?? null,
+      type:           'probe',
+      probe:          packet.probeToShow,
+      probe_question: packet.probeToShow,
+      probe_id:       packet.probeId ?? null,
+      query_id:       queryRow?.id ?? null,
+      topic:          packet.topic_matched ?? null,
     });
   }
 

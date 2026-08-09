@@ -19,15 +19,23 @@ const upstashRatelimit = redis
     })
   : null;
 
+function withTimeout<T>(promise: Promise<T>, ms = 800): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error(`Redis timeout after ${ms}ms`)), ms)
+    ),
+  ]);
+}
+
 export const ratelimit = {
   async limit(userId: string) {
     if (!upstashRatelimit) {
       return { success: true, limit: 20, remaining: 19, reset: 0 };
     }
     try {
-      return await upstashRatelimit.limit(userId);
-    } catch (err) {
-      console.warn('Rate limiting bypassed due to Redis connection issue:', err);
+      return await withTimeout(upstashRatelimit.limit(userId), 800);
+    } catch {
       return { success: true, limit: 20, remaining: 19, reset: 0 };
     }
   }
